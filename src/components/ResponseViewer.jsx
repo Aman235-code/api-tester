@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  FileDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Prism from "prismjs";
@@ -28,7 +29,7 @@ const highlightMatches = (text, query) => {
 };
 
 const ResponseViewer = ({ response, loading, time }) => {
-  const [showHeaders, setShowHeaders] = useState(false); // collapsed by default
+  const [showHeaders, setShowHeaders] = useState(true);
   const [showBody, setShowBody] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const viewerRef = useRef(null);
@@ -40,6 +41,26 @@ const ResponseViewer = ({ response, loading, time }) => {
     } else {
       toast.error("No response body to copy.");
     }
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([
+      JSON.stringify(
+        {
+          status: response.status,
+          headers: response.headers,
+          data: response.data,
+        },
+        null,
+        2
+      ),
+      { type: "application/json" },
+    ]);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "response.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   useEffect(() => {
@@ -67,6 +88,13 @@ const ResponseViewer = ({ response, loading, time }) => {
             title="Copy response body"
           >
             <Copy className="h-4 w-4 text-gray-700 group-hover:text-blue-600" />
+          </button>
+          <button
+            onClick={handleExport}
+            className="bg-gray-100 hover:bg-gray-200 p-2 rounded group"
+            title="Export to JSON"
+          >
+            <FileDown className="h-4 w-4 text-gray-700 group-hover:text-blue-600" />
           </button>
         </div>
       )}
@@ -103,7 +131,6 @@ const ResponseViewer = ({ response, loading, time }) => {
             )}
           </div>
 
-          {/* Collapsible Headers */}
           <div className="mb-4">
             <div
               onClick={() => setShowHeaders(!showHeaders)}
@@ -131,7 +158,6 @@ const ResponseViewer = ({ response, loading, time }) => {
             </AnimatePresence>
           </div>
 
-          {/* Collapsible Body */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <div
