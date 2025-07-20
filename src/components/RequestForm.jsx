@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -12,6 +13,7 @@ import {
   Save,
   Trash,
   FilePlus,
+  FolderOpen,
 } from "lucide-react";
 import { Listbox } from "@headlessui/react";
 
@@ -25,7 +27,7 @@ const methodOptions = [
 const templates = [
   {
     name: "Get Posts",
-    url: "https://jsonplaceholder.typicode.com/posts",
+    url: "https://jsonplaceholder.typicode.com/posts/1",
     method: "GET",
     body: "",
   },
@@ -37,11 +39,18 @@ const templates = [
   },
 ];
 
-const RequestForm = ({ setResponse, setLoading }) => {
+const RequestForm = ({
+  setResponse,
+  setLoading,
+  setResponseTime,
+  presets = [],
+  addPreset,
+}) => {
   const [url, setUrl] = useState("");
   const [method, setMethod] = useState("GET");
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [presetName, setPresetName] = useState("");
 
   const sendRequest = async () => {
     setIsSending(true);
@@ -58,13 +67,16 @@ const RequestForm = ({ setResponse, setLoading }) => {
       const res = await axios(config);
       const endTime = performance.now();
 
+      const timeTaken = (endTime - startTime).toFixed(2);
+
       setResponse({
         status: res.status,
         headers: res.headers,
         data: res.data,
-        time: (endTime - startTime).toFixed(2),
+        time: timeTaken,
       });
 
+      setResponseTime(timeTaken);
       toast.dismiss();
       toast.success(`Success! Status ${res.status}`);
     } catch (err) {
@@ -91,6 +103,29 @@ const RequestForm = ({ setResponse, setLoading }) => {
     setUrl(tpl.url);
     setMethod(tpl.method);
     setBody(tpl.body);
+  };
+
+  const saveCurrentPreset = () => {
+    if (!url || !presetName) {
+      toast.error("Provide both URL and preset name");
+      return;
+    }
+    const newPreset = { name: presetName, url, method, body };
+    addPreset(newPreset);
+    toast.success("Preset saved!");
+    setPresetName("");
+  };
+
+  const loadPreset = (preset) => {
+    setUrl(preset.url);
+    setMethod(preset.method);
+    setBody(preset.body);
+  };
+
+  const clearPresets = () => {
+    localStorage.removeItem("api_presets");
+    toast.success("Presets cleared!");
+    window.location.reload();
   };
 
   return (
@@ -164,6 +199,7 @@ const RequestForm = ({ setResponse, setLoading }) => {
         <button
           onClick={clearFields}
           className="flex items-center gap-2 bg-gray-200 text-gray-800 px-3 py-2 rounded hover:bg-gray-300"
+          title="Clear fields"
         >
           <Trash className="w-4 h-4" /> Clear
         </button>
@@ -173,10 +209,50 @@ const RequestForm = ({ setResponse, setLoading }) => {
             key={tpl.name}
             onClick={() => loadTemplate(tpl)}
             className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200"
+            title={`Load template: ${tpl.name}`}
           >
             <FilePlus className="w-4 h-4" /> {tpl.name}
           </button>
         ))}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+          placeholder="Preset name"
+          className="border p-2 rounded-md text-sm"
+        />
+        <button
+          onClick={saveCurrentPreset}
+          className="flex items-center gap-2 bg-yellow-100 text-yellow-700 px-3 py-2 rounded hover:bg-yellow-200"
+        >
+          <Save className="w-4 h-4" /> Save Preset
+        </button>
+        {presets.length > 0 && (
+          <>
+            {presets.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => loadPreset(p)}
+                className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-2 rounded hover:bg-purple-200"
+              >
+                <FolderOpen className="w-4 h-4" /> {p.name}
+              </button>
+            ))}
+            <button
+              onClick={clearPresets}
+              className="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200"
+            >
+              <Trash2 className="w-4 h-4" /> Clear Presets
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="mt-6 text-center text-sm text-gray-400 italic">
+        Created by <span className="text-blue-600 font-semibold">Aman</span>
       </div>
     </motion.div>
   );

@@ -19,11 +19,12 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4 font-inter">
       <Toaster />
       <h1 className="text-3xl font-bold mb-6 text-center text-blue-900">
         🧪 API Tester Pro
       </h1>
+
       <RequestForm
         setResponse={setResponse}
         setLoading={setLoading}
@@ -31,10 +32,11 @@ function App() {
         presets={presets}
         addPreset={addPreset}
       />
+
       <ResponseViewer
         response={response}
         loading={loading}
-        time={responseTime}
+        time={responseTime} // Pass the response time as `time`
       />
     </div>
   );

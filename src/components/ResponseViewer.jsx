@@ -7,10 +7,12 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Prism from "prismjs";
 import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-json";
 
 const getStatusColor = (status) => {
   if (!status) return "text-gray-500";
@@ -19,18 +21,24 @@ const getStatusColor = (status) => {
   return "text-yellow-600";
 };
 
+const highlightMatches = (text, query) => {
+  if (!query) return text;
+  const regex = new RegExp(`(${query})`, "gi");
+  return text.replace(regex, '<mark class="bg-yellow-300">$1</mark>');
+};
+
 const ResponseViewer = ({ response, loading, time }) => {
-  const [showHeaders, setShowHeaders] = useState(false);
+  const [showHeaders, setShowHeaders] = useState(false); // collapsed by default
   const [showBody, setShowBody] = useState(true);
-  const bodyRef = useRef(null);
-  const headersRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const viewerRef = useRef(null);
 
   const handleCopy = () => {
     if (response?.data) {
       navigator.clipboard.writeText(JSON.stringify(response.data, null, 2));
-      toast.success("Body copied to clipboard!");
+      toast.success("Response body copied!");
     } else {
-      toast.error("No body to copy.");
+      toast.error("No response body to copy.");
     }
   };
 
@@ -38,33 +46,29 @@ const ResponseViewer = ({ response, loading, time }) => {
     Prism.highlightAll();
   }, [response, showBody, showHeaders]);
 
-  useEffect(() => {
-    // Auto expand JSON body if it's large, otherwise collapse
-    if (response?.data) {
-      const jsonLength = JSON.stringify(response.data).length;
-      setShowBody(jsonLength > 100);
-    }
-    setShowHeaders(false);
-  }, [response]);
-
   if (!response && !loading) return null;
+
+  const rawBody = response?.data ? JSON.stringify(response.data, null, 2) : "";
+  const highlightedBody = highlightMatches(rawBody, searchQuery);
 
   return (
     <motion.div
+      ref={viewerRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
       className="bg-white mt-6 p-6 rounded shadow border border-gray-200 relative font-inter"
     >
       {!loading && !response?.error && (
-        <button
-          onClick={handleCopy}
-          className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 p-2 rounded group"
-          title="Copy response body"
-        >
-          <Copy className="h-4 w-4 text-gray-700 group-hover:text-blue-600" />
-          <span className="sr-only">Copy body</span>
-        </button>
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="bg-gray-100 hover:bg-gray-200 p-2 rounded group"
+            title="Copy response body"
+          >
+            <Copy className="h-4 w-4 text-gray-700 group-hover:text-blue-600" />
+          </button>
+        </div>
       )}
 
       {loading ? (
@@ -80,18 +84,30 @@ const ResponseViewer = ({ response, loading, time }) => {
           <div
             className={`mb-4 font-semibold flex gap-2 items-center ${getStatusColor(
               response.status
-            )}`}
+            )} font-inter`}
           >
             <CheckCircle className="w-5 h-5" />
-            Status: {response.status}{" "}
-            {time && <span className="text-xs text-gray-500">({time} ms)</span>}
+            Status: {response.status}
+            {time && (
+              <span
+                className={`text-xs ml-2 ${
+                  time < 300
+                    ? "text-green-600"
+                    : time < 1000
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                ({time} ms)
+              </span>
+            )}
           </div>
 
           {/* Collapsible Headers */}
           <div className="mb-4">
             <div
               onClick={() => setShowHeaders(!showHeaders)}
-              className="flex items-center justify-between cursor-pointer font-semibold text-gray-700 hover:text-blue-600 mb-1"
+              className="flex items-center justify-between cursor-pointer font-semibold text-gray-700 hover:text-blue-600 mb-1 font-inter"
             >
               <span>Headers</span>
               {showHeaders ? (
@@ -107,7 +123,7 @@ const ResponseViewer = ({ response, loading, time }) => {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-gray-100 border border-gray-300 p-2 rounded overflow-x-auto text-sm"
+                  className="bg-gray-100 border border-gray-300 p-2 rounded overflow-x-auto text-sm font-inter"
                 >
                   {JSON.stringify(response.headers, null, 2)}
                 </motion.pre>
@@ -117,16 +133,28 @@ const ResponseViewer = ({ response, loading, time }) => {
 
           {/* Collapsible Body */}
           <div>
-            <div
-              onClick={() => setShowBody(!showBody)}
-              className="flex items-center justify-between cursor-pointer font-semibold text-gray-700 hover:text-blue-600 mb-1"
-            >
-              <span>Body</span>
-              {showBody ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
+            <div className="flex items-center justify-between mb-2">
+              <div
+                onClick={() => setShowBody(!showBody)}
+                className="flex items-center justify-between cursor-pointer font-semibold text-gray-700 hover:text-blue-600 font-inter"
+              >
+                <span>Body</span>
+                {showBody ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </div>
+              <div className="flex items-center bg-white border border-gray-300 rounded overflow-hidden">
+                <Search className="h-4 w-4 text-gray-400 ml-2" />
+                <input
+                  type="text"
+                  placeholder="Search response..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-64 px-2 py-1 text-sm focus:outline-none"
+                />
+              </div>
             </div>
             <AnimatePresence initial={false}>
               {showBody && (
@@ -135,11 +163,12 @@ const ResponseViewer = ({ response, loading, time }) => {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="language-json bg-gray-100 border border-gray-300 p-2 rounded overflow-x-auto text-sm"
+                  className="language-json bg-gray-100 border border-gray-300 p-2 rounded overflow-x-auto text-sm text-yellow-500 font-inter"
                 >
-                  <code className="language-json">
-                    {JSON.stringify(response.data, null, 2)}
-                  </code>
+                  <code
+                    className="language-json"
+                    dangerouslySetInnerHTML={{ __html: highlightedBody }}
+                  ></code>
                 </motion.pre>
               )}
             </AnimatePresence>
