@@ -51,6 +51,7 @@ const RequestForm = ({
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [presetName, setPresetName] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState(null);
 
   const sendRequest = async () => {
     setIsSending(true);
@@ -117,6 +118,7 @@ const RequestForm = ({
   };
 
   const loadPreset = (preset) => {
+    setSelectedPreset(preset);
     setUrl(preset.url);
     setMethod(preset.method);
     setBody(preset.body);
@@ -136,6 +138,7 @@ const RequestForm = ({
       className="bg-white shadow-xl p-6 rounded-lg border border-blue-100"
     >
       <div className="mb-4 flex flex-col md:flex-row gap-3 items-center">
+        {/* Method Selector */}
         <Listbox value={method} onChange={setMethod}>
           <div className="relative z-10">
             <Listbox.Button className="w-28 border px-3 py-2 rounded-md bg-white font-semibold text-left">
@@ -162,6 +165,7 @@ const RequestForm = ({
           </div>
         </Listbox>
 
+        {/* URL Input */}
         <input
           type="text"
           placeholder="https://jsonplaceholder.typicode.com/posts/1"
@@ -170,6 +174,7 @@ const RequestForm = ({
           className="border flex-1 p-2 rounded-md w-full text-gray-800"
         />
 
+        {/* Send Button */}
         <motion.button
           whileHover={{ scale: 1.05, boxShadow: "0 0 10px #3b82f6" }}
           whileTap={{ scale: 0.95 }}
@@ -186,6 +191,7 @@ const RequestForm = ({
         </motion.button>
       </div>
 
+      {/* Body Input for POST/PUT */}
       {(method === "POST" || method === "PUT") && (
         <textarea
           className="w-full p-3 border rounded-md h-32 font-mono bg-gray-50"
@@ -195,11 +201,11 @@ const RequestForm = ({
         />
       )}
 
+      {/* Template Buttons */}
       <div className="flex flex-wrap gap-3 mt-4">
         <button
           onClick={clearFields}
           className="flex items-center gap-2 bg-gray-200 text-gray-800 px-3 py-2 rounded hover:bg-gray-300"
-          title="Clear fields"
         >
           <Trash className="w-4 h-4" /> Clear
         </button>
@@ -209,14 +215,14 @@ const RequestForm = ({
             key={tpl.name}
             onClick={() => loadTemplate(tpl)}
             className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200"
-            title={`Load template: ${tpl.name}`}
           >
             <FilePlus className="w-4 h-4" /> {tpl.name}
           </button>
         ))}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      {/* Save and Load Preset Dropdown */}
+      <div className="mt-6 flex flex-col  md:flex-row gap-12">
         <input
           type="text"
           value={presetName}
@@ -230,17 +236,33 @@ const RequestForm = ({
         >
           <Save className="w-4 h-4" /> Save Preset
         </button>
+
         {presets.length > 0 && (
           <>
-            {presets.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => loadPreset(p)}
-                className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-2 rounded hover:bg-purple-200"
-              >
-                <FolderOpen className="w-4 h-4" /> {p.name}
-              </button>
-            ))}
+            <Listbox value={selectedPreset} onChange={loadPreset}>
+              <div className="relative">
+                <Listbox.Button className="w-48 border px-3 py-2 rounded-md bg-purple-100 text-purple-700 flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  {selectedPreset?.name || "Load Preset"}
+                </Listbox.Button>
+                <Listbox.Options className="absolute mt-1 max-h-60 overflow-y-auto w-48 bg-white border rounded-md shadow-lg z-50">
+                  {presets.map((preset) => (
+                    <Listbox.Option
+                      key={preset.name}
+                      value={preset}
+                      className={({ active }) =>
+                        `cursor-pointer px-3 py-2 ${
+                          active ? "bg-purple-100" : ""
+                        }`
+                      }
+                    >
+                      {preset.name}
+                    </Listbox.Option>
+                  ))}
+                </Listbox.Options>
+              </div>
+            </Listbox>
+
             <button
               onClick={clearPresets}
               className="flex items-center gap-2 bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200"
