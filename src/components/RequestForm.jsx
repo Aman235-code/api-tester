@@ -58,12 +58,18 @@ const RequestForm = ({
     setLoading(true);
     toast.loading("Sending request...");
 
+    const corsProxy = "https://cors-anywhere.herokuapp.com/";
+
     try {
       const config = {
         method,
-        url,
+        url: corsProxy + url,
+        headers: {
+          "Content-Type": "application/json",
+        },
         data: method !== "GET" ? JSON.parse(body || "{}") : undefined,
       };
+
       const startTime = performance.now();
       const res = await axios(config);
       const endTime = performance.now();
